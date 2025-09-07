@@ -4,7 +4,7 @@
 const GAME_WIDTH = 960, GAME_HEIGHT = 640;
 const REELS = 5, ROWS = 3;
 const REEL_WIDTH = 150, REEL_HEIGHT = 120, REEL_GAP = 10;
-const SPIN_DURATION = 1100;
+const SPIN_DURATION = 700;               // faster reel spin
 const JACKPOT_SEED = 10000, JACKPOT_CONTRIBUTION = 0.01, JACKPOT_CHANCE = 0.0005;
 const FREE_SPINS_COUNT = 10, FREE_SPINS_MULT = 2;
 
@@ -174,7 +174,7 @@ function spin(){
   const scene = game.scene.scenes[0];
   for(let reel=0; reel<REELS; reel++){
     const col = symbols[reel];
-    const delay = reel * 140;
+    const delay = reel * 90;  // tighter stagger between reels
 
     for(let i=0;i<col.length;i++){
       const s = col[i];
