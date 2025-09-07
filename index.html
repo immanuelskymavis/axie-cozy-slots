@@ -14,11 +14,11 @@
       <header class="hud">
         <div class="hud-row">
           <div class="stat">
-            <div class="label">Balance</div>
+            <div class="label">💰 Balance</div>
             <div class="value" id="balanceValue">10000</div>
           </div>
           <div class="stat">
-            <div class="label">Bet</div>
+            <div class="label">🎯 Bet</div>
             <div class="value"><span id="betValue">100</span></div>
             <div class="controls">
               <button id="betDecreaseBtn" class="btn sm">−</button>
@@ -26,32 +26,16 @@
             </div>
           </div>
           <div class="stat">
-            <div class="label">Win</div>
+            <div class="label">🏆 Win</div>
             <div class="value" id="winValue">0</div>
           </div>
           <div class="stat">
-            <div class="label">Jackpot</div>
+            <div class="label">💎 Jackpot</div>
             <div class="value gold" id="jackpotValue">10000</div>
           </div>
           <div class="stat">
-            <div class="label">Free Spins</div>
+            <div class="label">🎁 Free Spins</div>
             <div class="value" id="freeSpinsValue">0</div>
-          </div>
-        </div>
-        <div class="hud-row">
-          <div class="controls">
-            <button id="spinBtn" class="btn primary">SPIN</button>
-            <label class="autoplay">
-              Autoplay
-              <select id="autoplaySelect">
-                <option value="0">Off</option>
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-              </select>
-            </label>
-            <button id="paytableBtn" class="btn">Paytable</button>
-            <button id="musicToggle" class="btn">Music</button>
           </div>
         </div>
       </header>
@@ -59,6 +43,26 @@
       <main class="stage">
         <div id="game-container"></div>
       </main>
+
+      <!-- bottom toolbar with main controls -->
+      <footer class="toolbar">
+        <button id="spinBtn" class="btn xl primary">SPIN</button>
+
+        <label class="autoplay big">
+          Autoplay
+          <select id="autoplaySelect">
+            <option value="0">Off</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+
+        <div class="right-tools">
+          <button id="paytableBtn" class="btn">Paytable</button>
+          <button id="musicToggle" class="btn">Music</button>
+        </div>
+      </footer>
     </div>
 
     <!-- cache-bust param ensures browsers always fetch the latest JS after updates -->

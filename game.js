@@ -9,14 +9,14 @@ const JACKPOT_SEED = 10000, JACKPOT_CONTRIBUTION = 0.01, JACKPOT_CHANCE = 0.0005
 const FREE_SPINS_COUNT = 10, FREE_SPINS_MULT = 2;
 
 const SYMBOLS = {
-  BEAST:   { id: 0, name: 'Beast',   color: 0xFFB347, txt: 0x1b1b1b, label: 'B', pays: [0,0,5,25,100] },
-  PLANT:   { id: 1, name: 'Plant',   color: 0x90EE90, txt: 0x1b1b1b, label: 'P', pays: [0,0,5,25,100] },
-  AQUATIC: { id: 2, name: 'Aquatic', color: 0x87CEFA, txt: 0x1b1b1b, label: 'A', pays: [0,0,10,50,200] },
-  BIRD:    { id: 3, name: 'Bird',    color: 0xFFC0CB, txt: 0x1b1b1b, label: 'D', pays: [0,0,10,50,200] },
-  REPTILE: { id: 4, name: 'Reptile', color: 0xDDA0DD, txt: 0x1b1b1b, label: 'R', pays: [0,0,15,75,300] },
-  BUG:     { id: 5, name: 'Bug',     color: 0xFFD700, txt: 0x1b1b1b, label: 'G', pays: [0,0,15,75,300] },
-  WILD:    { id: 6, name: 'Wild',    color: 0xffffff, txt: 0x1b1b1b, label: 'W', pays: [0,0,25,125,500] },
-  SCATTER: { id: 7, name: 'Scatter', color: 0xFF6347, txt: 0xffffff, label: 'S', pays: [0,0,2,10,50] },
+  BEAST:   { id: 0, name: 'Beast',   color: 0xFFB347, txt: 0x1b1b1b, label: 'B', pays: [0,0,5,25,100], emoji: '🦊' },
+  PLANT:   { id: 1, name: 'Plant',   color: 0x90EE90, txt: 0x1b1b1b, label: 'P', pays: [0,0,5,25,100], emoji: '🌿' },
+  AQUATIC: { id: 2, name: 'Aquatic', color: 0x87CEFA, txt: 0x1b1b1b, label: 'A', pays: [0,0,10,50,200], emoji: '🐟' },
+  BIRD:    { id: 3, name: 'Bird',    color: 0xFFC0CB, txt: 0x1b1b1b, label: 'D', pays: [0,0,10,50,200], emoji: '🐦' },
+  REPTILE: { id: 4, name: 'Reptile', color: 0xDDA0DD, txt: 0x1b1b1b, label: 'R', pays: [0,0,15,75,300], emoji: '🐍' },
+  BUG:     { id: 5, name: 'Bug',     color: 0xFFD700, txt: 0x1b1b1b, label: 'G', pays: [0,0,15,75,300], emoji: '🐞' },
+  WILD:    { id: 6, name: 'Wild',    color: 0xffffff, txt: 0x1b1b1b, label: 'W', pays: [0,0,25,125,500], emoji: '🌟' },
+  SCATTER: { id: 7, name: 'Scatter', color: 0xFF6347, txt: 0xffffff, label: 'S', pays: [0,0,2,10,50], emoji: '🎁' },
 };
 
 // Reels' weighted distribution (scatter limited on reels 1/3/5 to reduce frequency)
@@ -41,6 +41,7 @@ let symbols = []; // [reel][rowIndex] -> {container, data}
 let reelTweens = [];
 let isSpinning = false;
 let balance = 10000, currentBet = 100, lastWin = 0, freeSpinsRemaining = 0, autoplayCount = 0, jackpotValue = JACKPOT_SEED;
+let paylineGraphics;
 
 const config = {
   type: Phaser.AUTO,
@@ -77,8 +78,15 @@ function create(){
     reelAreaHeight
   );
   reelGroup = this.add.container(0,0);
-  reelGroup.setMask(new Phaser.Display.Masks.GeometryMask(this, reelMask));
   symbolsGroup = this.add.container(0,0);
+  
+  // Apply the same mask to both containers
+  const gmask = new Phaser.Display.Masks.GeometryMask(this, reelMask);
+  reelGroup.setMask(gmask);
+  symbolsGroup.setMask(gmask);
+  
+  // Create payline graphics overlay
+  paylineGraphics = this.add.graphics().setDepth(1000);
 
   // Column backgrounds
   for(let r=0;r<REELS;r++){
@@ -135,11 +143,12 @@ function createSymbol(scene, def, x, y){
   // rounded corners effect via scale/alpha overlay
   card.alpha = 0.95;
 
-  const label = scene.add.text(0,-6, def.label, { fontFamily:'Nunito', fontSize:'44px', color:'#'+def.txt.toString(16).padStart(6,'0'), fontStyle:'800' }).setOrigin(0.5);
-  const name = scene.add.text(0,24, def.name, { fontFamily:'Nunito', fontSize:'15px', color:'#'+def.txt.toString(16).padStart(6,'0') }).setOrigin(0.5);
+  // Show big emoji, smaller caption
+  const emojiTxt = scene.add.text(0,-4, def.emoji, { fontFamily:'Arial', fontSize:'54px', color:'#'+def.txt.toString(16).padStart(6,'0') }).setOrigin(0.5);
+  const caption = scene.add.text(0,30, def.name, { fontFamily:'Nunito', fontSize:'14px', color:'#'+def.txt.toString(16).padStart(6,'0') }).setOrigin(0.5);
 
-  ct.add([card, label, name]);
-  return { container: ct, data: def };
+  ct.add([card, emojiTxt, caption]);
+  return { container: ct, data: def, card };
 }
 
 function getWeightedSymbol(reelIndex){
@@ -169,6 +178,7 @@ function spin(){
 
   isSpinning = true;
   lastWin = 0;
+  clearPaylines();
   for(const t of reelTweens){ if(t) t.stop(); }
 
   const scene = game.scene.scenes[0];
@@ -258,6 +268,9 @@ function finishSpin(free){
   balance += lastWin;
   updateUI();
 
+  // show winning lines
+  drawPaylines(grid, result.lineWins);
+
   if(autoplayCount > 0){
     autoplayCount--;
     if(autoplayCount === 0) document.getElementById('autoplaySelect').value = '0';
@@ -270,6 +283,7 @@ function finishSpin(free){
 // ---------- Math ----------
 function evaluateWin(grid, free){
   let total = 0, scatters = 0, triggeredFS = false;
+  const lineWins = [];
 
   // Count scatters (any position)
   for(let r=0;r<REELS;r++){
@@ -283,16 +297,26 @@ function evaluateWin(grid, free){
   }
 
   // Paylines (left to right, wild substitutes, scatter stops line)
-  for(const line of PAYLINES){
+  for(let i=0; i<PAYLINES.length; i++){
+    const line = PAYLINES[i];
     const seq = [];
     for(let r=0;r<REELS;r++){
       seq.push(grid[r][ line[r] ]);
     }
-    const lineWin = evaluateLine(seq);
-    total += (free && lineWin>0) ? lineWin * FREE_SPINS_MULT : lineWin;
+    const result = evaluateLine(seq);
+    const lineWin = (free && result.win>0) ? result.win * FREE_SPINS_MULT : result.win;
+    total += lineWin;
+    
+    if(lineWin > 0){
+      lineWins.push({
+        lineIndex: i,
+        count: result.count,
+        win: lineWin
+      });
+    }
   }
 
-  return { totalWin: Math.floor(total), freeSpinsTriggered: triggeredFS };
+  return { totalWin: Math.floor(total), freeSpinsTriggered: triggeredFS, lineWins };
 }
 
 function evaluateLine(seq){
@@ -316,10 +340,11 @@ function evaluateLine(seq){
     }
   }
 
-  if(count < 3) return 0;
+  if(count < 3) return { win: 0, count };
   if(target === null) target = SYMBOLS.WILD.id;
   const sym = Object.values(SYMBOLS).find(s=>s.id===target) || SYMBOLS.WILD;
-  return currentBet * (sym.pays[count] || 0);
+  const win = currentBet * (sym.pays[count] || 0);
+  return { win, count };
 }
 
 // ---------- UI refresh ----------
@@ -335,4 +360,52 @@ function updateUI(){
   $('betDecreaseBtn').disabled = isSpinning;
   $('betIncreaseBtn').disabled = isSpinning;
   $('autoplaySelect').disabled = isSpinning || freeSpinsRemaining>0;
+}
+
+// ---------- Payline helpers ----------
+function getSymbolCenter(reel,row){
+  // compute center based on initial layout math
+  const areaW = (REEL_WIDTH+REEL_GAP)*REELS - REEL_GAP;
+  const baseX = GAME_WIDTH/2 - areaW/2 + REEL_WIDTH/2;
+  const baseY = GAME_HEIGHT/2 - (REEL_HEIGHT*ROWS)/2 + REEL_HEIGHT/2;
+  return {
+    x: baseX + reel*(REEL_WIDTH+REEL_GAP),
+    y: baseY + row*REEL_HEIGHT
+  };
+}
+
+function clearPaylines(){
+  if(paylineGraphics) paylineGraphics.clear();
+  // reset strokes & scale for visible symbols
+  for(let r=0;r<REELS;r++){
+    for(let row=0;row<ROWS;row++){
+      const sym = symbols[r][row];
+      if(sym){
+        sym.card.setStrokeStyle(3,0xffffff);
+        sym.container.setScale(1);
+      }
+    }
+  }
+}
+
+function drawPaylines(grid, wins){
+  if(!paylineGraphics || !wins || wins.length===0) return;
+  clearPaylines(); // ensure clean start
+  const palette=[0xff6b6b,0x4dabf7,0x51cf66,0xfd7e14,0x845ef7];
+  let colorIndex=0;
+  wins.forEach(w=>{
+    const clr = palette[colorIndex++ % palette.length];
+    paylineGraphics.lineStyle(5, clr, 0.9);
+    paylineGraphics.beginPath();
+    for(let r=0;r<w.count;r++){
+      const pos = getSymbolCenter(r, PAYLINES[w.lineIndex][r]);
+      if(r===0) paylineGraphics.moveTo(pos.x,pos.y);
+      else paylineGraphics.lineTo(pos.x,pos.y);
+      // highlight symbol
+      const sym = grid[r][ PAYLINES[w.lineIndex][r] ];
+      sym.card.setStrokeStyle(4,0xd4af37);
+      game.scene.scenes[0].tweens.add({targets:sym.container,scale:1.15,yoyo:true,duration:250});
+    }
+    paylineGraphics.strokePath();
+  });
 }
