@@ -9,14 +9,14 @@ const JACKPOT_SEED = 10000, JACKPOT_CONTRIBUTION = 0.01, JACKPOT_CHANCE = 0.0005
 const FREE_SPINS_COUNT = 10, FREE_SPINS_MULT = 2;
 
 const SYMBOLS = {
-  BEAST:   { id: 0, name: 'Beast',   color: 0xFFB347, txt: 0x1b1b1b, label: 'B', pays: [0,0,5,25,100], emoji: '🦊' },
-  PLANT:   { id: 1, name: 'Plant',   color: 0x90EE90, txt: 0x1b1b1b, label: 'P', pays: [0,0,5,25,100], emoji: '🌿' },
-  AQUATIC: { id: 2, name: 'Aquatic', color: 0x87CEFA, txt: 0x1b1b1b, label: 'A', pays: [0,0,10,50,200], emoji: '🐟' },
-  BIRD:    { id: 3, name: 'Bird',    color: 0xFFC0CB, txt: 0x1b1b1b, label: 'D', pays: [0,0,10,50,200], emoji: '🐦' },
-  REPTILE: { id: 4, name: 'Reptile', color: 0xDDA0DD, txt: 0x1b1b1b, label: 'R', pays: [0,0,15,75,300], emoji: '🐍' },
-  BUG:     { id: 5, name: 'Bug',     color: 0xFFD700, txt: 0x1b1b1b, label: 'G', pays: [0,0,15,75,300], emoji: '🐞' },
-  WILD:    { id: 6, name: 'Wild',    color: 0xffffff, txt: 0x1b1b1b, label: 'W', pays: [0,0,25,125,500], emoji: '🌟' },
-  SCATTER: { id: 7, name: 'Scatter', color: 0xFF6347, txt: 0xffffff, label: 'S', pays: [0,0,2,10,50], emoji: '🎁' },
+  BEAST:   { id: 0, name: 'Beast',   key:'beast',   color: 0xFFB347, txt: 0x1b1b1b, label: 'B', pays: [0,0,5,25,100], emoji: '🦊' },
+  PLANT:   { id: 1, name: 'Plant',   key:'plant',   color: 0x90EE90, txt: 0x1b1b1b, label: 'P', pays: [0,0,5,25,100], emoji: '🌿' },
+  AQUATIC: { id: 2, name: 'Aquatic', key:'aquatic', color: 0x87CEFA, txt: 0x1b1b1b, label: 'A', pays: [0,0,10,50,200], emoji: '🐟' },
+  BIRD:    { id: 3, name: 'Bird',    key:'bird',    color: 0xFFC0CB, txt: 0x1b1b1b, label: 'D', pays: [0,0,10,50,200], emoji: '🐦' },
+  REPTILE: { id: 4, name: 'Reptile', key:'reptile', color: 0xDDA0DD, txt: 0x1b1b1b, label: 'R', pays: [0,0,15,75,300], emoji: '🐍' },
+  BUG:     { id: 5, name: 'Bug',     key:'bug',     color: 0xFFD700, txt: 0x1b1b1b, label: 'G', pays: [0,0,15,75,300], emoji: '🐞' },
+  WILD:    { id: 6, name: 'Wild',    key:'wild',    color: 0xffffff, txt: 0x1b1b1b, label: 'W', pays: [0,0,25,125,500], emoji: '🌟' },
+  SCATTER: { id: 7, name: 'Scatter', key:'scatter', color: 0xFF6347, txt: 0xffffff, label: 'S', pays: [0,0,2,10,50], emoji: '🎁' },
 };
 
 // Reels' weighted distribution (scatter limited on reels 1/3/5 to reduce frequency)
@@ -55,8 +55,18 @@ const config = {
 window.onload = () => { game = new Phaser.Game(config); setupUI(); };
 
 // Preload is intentionally empty; loading data-URI images is blocked on GitHub Pages
-// and unnecessary for this prototype.
-function preload(){}
+// Load symbol PNGs so we can render actual images instead of emojis
+function preload(){
+  const base = 'assets/symbols/';
+  this.load.image('beast',   base + 'beast.png');
+  this.load.image('plant',   base + 'plant.png');
+  this.load.image('aquatic', base + 'aquatic.png');
+  this.load.image('bird',    base + 'bird.png');
+  this.load.image('reptile', base + 'reptile.png');
+  this.load.image('bug',     base + 'bug.png');
+  this.load.image('wild',    base + 'wild.png');
+  this.load.image('scatter', base + 'scatter.png');
+}
 
 function create(){
   // Visual + console confirmation the scene booted
@@ -143,11 +153,20 @@ function createSymbol(scene, def, x, y){
   // rounded corners effect via scale/alpha overlay
   card.alpha = 0.95;
 
-  // Show big emoji, smaller caption
-  const emojiTxt = scene.add.text(0,-4, def.emoji, { fontFamily:'Arial', fontSize:'54px', color:'#'+def.txt.toString(16).padStart(6,'0') }).setOrigin(0.5);
+  // Prefer PNG image; fall back to emoji if texture missing
+  let gfxObj;
+  if(scene.textures.exists(def.key)){
+    gfxObj = scene.add.image(0,-6,def.key).setOrigin(0.5);
+    // scale to fit card
+    const maxW = REEL_WIDTH-48, maxH = REEL_HEIGHT-58;
+    const scale = Math.min(maxW/gfxObj.width, maxH/gfxObj.height,1);
+    gfxObj.setScale(scale);
+  }else{
+    gfxObj = scene.add.text(0,-4, def.emoji, { fontFamily:'Arial', fontSize:'54px', color:'#'+def.txt.toString(16).padStart(6,'0') }).setOrigin(0.5);
+  }
   const caption = scene.add.text(0,30, def.name, { fontFamily:'Nunito', fontSize:'14px', color:'#'+def.txt.toString(16).padStart(6,'0') }).setOrigin(0.5);
 
-  ct.add([card, emojiTxt, caption]);
+  ct.add([card, gfxObj, caption]);
   return { container: ct, data: def, card };
 }
 
